@@ -2,135 +2,150 @@ import './style.css'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as dat from 'lil-gui'
+import { Scene } from 'three'
 import vertexShader from './shaders/test/vertex.glsl'
 import fragmentShader from './shaders/test/fragment.glsl'
-import { Scene } from 'three'
-import ocean from './img/ocean.png'
+import vertexShaderLines from './shaders/test/vertexLines.glsl'
+import fragmentShaderLines from './shaders/test/fragmentLines.glsl'
+import trees from './assets/img/trees.jpg'
 import imagesLoaded from 'imagesloaded'
 import gsap from 'gsap'
 import FontFaceObserver from 'fontfaceobserver'
-import Scroll from './scroll.js'
+import{EffectComposer} from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import{RenderPass} from 'three/examples/jsm/postprocessing/RenderPass.js'
+import{ShaderPass} from 'three/examples/jsm/postprocessing/ShaderPass.js'
+import {PostProcessing} from './postprocessing.js'
+
+
+
 
 
 export default class Sketch{
     constructor(options){
-        this.time = 0;
-        this.container = options.dom
-        this.width = this.container.offsetWidth;
-        this.height = this.container.offsetHeight;
+       
+        this.time = 0
+
+        this.scene = new THREE.Scene()
+
+        this.container = options.dom;
+        this.width = this.container.offsetWidth
+        this.height = this.container.offsetHeight
 
 
-        this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(70, this.width/this.height, 100,2000)
-        this.camera.position.z = 600
-
-        // atan gives back radians so we have to convert it to degrees
-        this.camera.fov = (2*Math.atan(this.height/2 / this.camera.position.z))*(180/Math.PI)
-        
-        this.renderer = new THREE.WebGLRenderer({
-            antialas:true,
-            alpha:true
-        });
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,2))
-        
+        // renderer
+        this.renderer = new THREE.WebGLRenderer()
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
         this.renderer.setSize(this.width,this.height)
+        this.renderer.physicallyCorrectLights=true
+        this.renderer.outputEncoding = THREE.sRGBEncoding
+        this.renderer.setClearColor(0x111111, 1)
 
-
-
+        // add renderer to dom
         this.container.appendChild(this.renderer.domElement)
-
-        // controls
-        this.controls = new OrbitControls(this.camera,this.renderer.domElement)
-
-        // images
-
-        this.images = [...document.querySelectorAll('img')]
-
-        // Promises
-
-        const fontOpen = new Promise(resolve =>{
-            new FontFaceObserver("Open Sans").load().then(()=>{
-                resolve()
-            })
-        })
-
-        const fontPlayfair = new Promise((resolve, reject)=>{
-            new FontFaceObserver('Playfair Display').load().then(()=>{
-                resolve()
-            })
-        })
-
-        // preload Images
-
-        const preloadImages = new Promise((resolve, reject)=>{
-            imagesLoaded(document.querySelectorAll('img'),{background:true},resolve)
-        })
         
-        let allDone = [fontOpen,fontPlayfair,preloadImages]
+        // camera
+        this.camera = new THREE.PerspectiveCamera(
+            50,
+            window.innerWidth/window.innerHeight,
+            0.001,
+            1000,
 
-        // scroll position
-        this.currentScroll = 0;
+        )
+        // this.camera = new THREE.OrthographicCamera(
+        //     this.width / - 2, this.width / 2, this.height / 2, this.height / - 2, 1, 1000 
+        // )
+        this.camera.position.set(0,0,8)
+        this.controls = new OrbitControls(this.camera, this.renderer.domElement)
 
-        // Now we need to know where is the mouse
+        this.isPlaying = true
+        this.addImages()
+        // this.setPosition()
 
-        this.raycaster = new THREE.Raycaster()
-        this.mouse = new THREE.Vector2()
+        // this.mouseMovement()
         
+        this.setupResize()
+        this.addObjects()
+        this.addPostProcessing()
+        this.resize()
+        this.settings()
+        this.render();
 
-        Promise.all(allDone).then(()=>{
-            this.scroll = new Scroll()
-            this.addImages()
-            this.setPosition()
+        // there is a problem with the usual scroll so we need to use a custom one, scroll.js
+        // window.addEventListener('scroll', ()=>{
+        //     this.currentScroll = window.scrollY
 
-            this.mouseMovement()
-            this.resize()
-            this.setupResize()
-            // this.addObjects()
-            this.render();
-
-            // there is a problem with the usual scroll so we need to use a custom one, scroll.js
-            // window.addEventListener('scroll', ()=>{
-            //     this.currentScroll = window.scrollY
-
-            //     this.setPosition()
-            // })
-        })
+        //     this.setPosition()
+        // })
+    
         
 
     }
-    mouseMovement(){
+    // mouseMovement(){
        
 
-        window.addEventListener( 'mousemove', event => {
-            this.mouse.x = ( event.clientX / this.width ) * 2 - 1;
-            this.mouse.y = - ( event.clientY / this.height ) * 2 + 1;
+    //     window.addEventListener( 'mousemove', event => {
+    //         this.mouse.x = ( event.clientX / this.width ) * 2 - 1;
+    //         this.mouse.y = - ( event.clientY / this.height ) * 2 + 1;
 
-            // update the picking ray with the camera and pointer position
-            this.raycaster.setFromCamera(this.mouse, this.camera );
+    //         // update the picking ray with the camera and pointer position
+    //         this.raycaster.setFromCamera(this.mouse, this.camera );
 
-            // calculate objects intersecting the picking ray
-            const intersects = this.raycaster.intersectObjects( this.scene.children );
+    //         // calculate objects intersecting the picking ray
+    //         const intersects = this.raycaster.intersectObjects( this.scene.children );
 
-            if(intersects.length>0){
-                let obj = intersects[0].object;
-                obj.material.uniforms.uHover.value = intersects[0].uv
-            }
-        }, false );
+    //         if(intersects.length>0){
+    //             let obj = intersects[0].object;
+    //             obj.material.uniforms.uHover.value = intersects[0].uv
+    //         }
+    //     }, false );
 
+    // }
+    settings(){
+        let that = this;
+        this.settings={
+            uStrengthRGBShift: 0.2,
+            uNoiseStrength: 0.15,
+
+            position1X: 0,
+            position1Y: 0,
+            position1Z: 0,
+
+            position2X: -5,
+            position2Y: 0,
+            position2Z: 0,
+
+            position3X: 5,
+            position3Y: 0,
+            position3Z: 0,
+
+            cameraZ: 8
+        };
+        this.gui = new dat.GUI()
+        this.geo1 = this.gui.addFolder('geometry 1')
+        this.geo2 = this.gui.addFolder('geometry 2')
+        this.geo3 = this.gui.addFolder('geometry 3')
+        this.gui.add(this.settings, "uStrengthRGBShift", 0,1,0.01)
+        this.gui.add(this.settings, "uNoiseStrength", -2,2,0.01)
+        this.geo1.add(this.settings, 'position1X', -6,6,0.01).name('position1 X')
+        this.geo1.add(this.settings, 'position1Y', -6,6,0.01).name('position1 Y')
+        this.geo1.add(this.settings, 'position1Z', -6,6,0.01).name('position1 Z')
+        this.geo2.add(this.settings, 'position2X', -6,6,0.01).name('position2 X')
+        this.geo2.add(this.settings, 'position2Y', -6,6,0.01).name('position2 Y')
+        this.geo2.add(this.settings, 'position2Z', -6,6,0.01).name('position2 Z')
+        this.geo3.add(this.settings, 'position3X', -6,6,0.01).name('position3 X')
+        this.geo3.add(this.settings, 'position3Y', -6,6,0.01).name('position3 Y')
+        this.geo3.add(this.settings, 'position3Z', -6,6,0.01).name('position3 Z')
+        this.gui.add(this.settings, 'cameraZ',0,20,0.01).name('position camera Z')
     }
-
     setupResize(){
         window.addEventListener('resize', this.resize.bind(this))
     }
 
-    resize(){
-        this.width = this.container.offsetWidth;
-        this.height = this.container.offsetHeight;
-        this.renderer.setSize(this.width,this.height)
-        this.camera.aspect = this.width/this.height;
-        this.camera.updateProjectionMatrix(); 
-    }
+    
     addImages(){
+        let texture = new THREE.TextureLoader().load(trees)
+        texture.wrapS = THREE.MirroredRepeatWrapping;
+        texture.wrapT = THREE.MirroredRepeatWrapping;
         this.material = new THREE.ShaderMaterial({
             side: THREE.DoubleSide,
             fragmentShader:fragmentShader,
@@ -140,86 +155,155 @@ export default class Sketch{
                 uImage:{value: 0},
                 uHover: {value: new THREE.Vector2(0.5,0.5)},
                 uHoverState: {value: 0},
-                uOceanTexture: {value: new THREE.TextureLoader().load(ocean)}
+                uTreesTexture: {value: texture},     
             }
         })
 
-        this.materials = []
-        this.imageStore = this.images.map(img=>{
-            let bounds = img.getBoundingClientRect()
-
-            let geometry = new THREE.PlaneBufferGeometry(bounds.width,bounds.height,20,20);
-            let texture = new THREE.Texture(img);
-            texture.needsUpdate = true
-            // let material = new THREE.MeshBasicMaterial({
-            //     map: texture
-            // })
-
-            let material = this.material.clone()
-
-            img.addEventListener('mouseenter',()=>{
-                gsap.to(material.uniforms.uHoverState,{
-                    duration:1,
-                    value:1
-                })
-            })
-            img.addEventListener('mouseout',()=>{
-                gsap.to(material.uniforms.uHoverState,{
-                    duration:1,
-                    value:0
-                })
-            })
-
-            this.materials.push(material)
-            
-            material.uniforms.uImage.value = texture
-
-            let mesh = new THREE.Mesh(geometry,material);
-
-            this.scene.add(mesh)
-
-            return{
-            img: img,
-            mesh: mesh,
-            top: bounds.top,
-            left: bounds.left,
-            width: bounds.width,
-            height: bounds.height   
+        // Lines for ico
+        this.materialLines = new THREE.ShaderMaterial({
+            side: THREE.DoubleSide,
+            fragmentShader:fragmentShaderLines,
+            vertexShader: vertexShaderLines, 
+            uniforms:{
+                uTime: {value:0},
+                uImage:{value: 0},
+                uHover: {value: new THREE.Vector2(0.5,0.5)},
+                uHoverState: {value: 0},
+                uTreesTexture: {value: texture},
+                uNoiseStrength: {value: 0}
             }
         })
     }
-    setPosition(){
-        this.imageStore.forEach(obj => {
-            obj.mesh.position.y = this.currentScroll -obj.top + this.height/2 - obj.height/2;
-            obj.mesh.position.x = obj.left -this.width/2 + obj.width/2;
-        })
-    }
+    // setPosition(){
+    //     this.imageStore.forEach(obj => {
+    //         obj.mesh.position.y = this.currentScroll -obj.top + this.height/2 - obj.height/2;
+    //         obj.mesh.position.x = obj.left -this.width/2 + obj.width/2;
+    //     })
+    // }
     addObjects(){
-        this.geometry = new THREE.PlaneBufferGeometry(100,100,40,40)
-        // this.geometry = new THREE.SphereBufferGeometry(0.4,40,40)
+        this.geometry = new THREE.OctahedronGeometry(1,1)
+        this.geometryLines = new THREE.OctahedronBufferGeometry(1.001,1)
+        let length = this.geometryLines.attributes.position.array.length;
 
+        let baryCoords = []
+
+        for (let i = 0; i < length; i++) {
+            baryCoords.push(0,0,1,   0,1,0,   1,0,0)
+        }
+        let aBaryCoords = new Float32Array(baryCoords)
+        this.geometryLines.setAttribute('aBaryCoords', new THREE.BufferAttribute(aBaryCoords,3))
         
 
-        this.mesh = new THREE.Mesh(this.geometry, this.material);
-        this.scene.add(this.mesh);
+        this.mesh1 = new THREE.Mesh(this.geometryLines, this.material);
+        this.meshLines1 = new THREE.Mesh(this.geometryLines, this.materialLines);
+
+        this.mesh2 = new THREE.Mesh(this.geometryLines, this.material);
+        this.meshLines2 = new THREE.Mesh(this.geometryLines, this.materialLines);
+        this.mesh2.position.set(-5,0,0)
+        this.meshLines2.position.set(-5,0,0)
+
+        this.mesh3 = new THREE.Mesh(this.geometryLines, this.material);
+        this.meshLines3 = new THREE.Mesh(this.geometryLines, this.materialLines);
+        this.mesh3.position.set(5,0,0)
+        this.meshLines3.position.set(5,0,0)
+
+        this.scene.add(this.mesh1, this.meshLines1);
+        this.scene.add(this.mesh2, this.meshLines2);
+        this.scene.add(this.mesh3, this.meshLines3);
     }
+    addPostProcessing(){
+        this.composer = new EffectComposer(this.renderer)
+        this.composer.addPass(new RenderPass(this.scene,this.camera))
+     
+        this.customPass = new ShaderPass(PostProcessing)
+        this.customPass.uniforms["resolution"].value = new THREE.Vector2(window.innerWidth, window.innerHeight)
+        this.customPass.uniforms["resolution"].value.multiplyScalar(window.devicePixelRatio)
+        this.composer.addPass(this.customPass)
+    }
+    resize(){
+        this.width = this.container.offsetWidth;
+        this.height = this.container.offsetHeight;
+        this.renderer.setSize(this.width,this.height)
+        this.composer.setSize(this.width,this.height)
 
+        this.camera.aspect = this.width/this.height;
+        this.camera.updateProjectionMatrix(); 
+    }
     render(){
-        this.time += 0.05;
+        this.time += 0.0005;  
 
-        this.scroll.render()
-        this.currentScroll = this.scroll.scrollToRender
-        this.setPosition()
+        this.customPass.uniforms.uTime.value = this.time
+        this.customPass.uniforms.uStrengthRGBShift.value = this.settings.uStrengthRGBShift
+        this.customPass.uniforms.uNoiseStrength.value = this.settings.uNoiseStrength
+
+        // Positions
+
+        this.mesh1.position.x = this.settings.position1X
+        this.meshLines1.position.x = this.settings.position1X
+
+        this.mesh1.position.y = this.settings.position1Y
+        this.meshLines1.position.y = this.settings.position1Y
+
+        this.mesh1.position.z = this.settings.position1Z
+        this.meshLines1.position.z = this.settings.position1Z
+
+        this.mesh2.position.x = this.settings.position2X
+        this.meshLines2.position.x = this.settings.position2X
+
+        this.mesh2.position.y = this.settings.position2Y
+        this.meshLines2.position.y = this.settings.position2Y
+
+        this.mesh2.position.z = this.settings.position2Z
+        this.meshLines2.position.z = this.settings.position2Z
+
+        this.mesh3.position.x = this.settings.position3X
+        this.meshLines3.position.x = this.settings.position3X
+
+        this.mesh3.position.y = this.settings.position3Y
+        this.meshLines3.position.y = this.settings.position3Y
+
+        this.mesh3.position.z = this.settings.position3Z
+        this.meshLines3.position.z = this.settings.position3Z
+
+        // Camera Position
+
+        this.camera.position.z = this.settings.cameraZ
+
+
+        // Rotations
+
+        this.mesh1.rotation.x = this.time;
+        this.mesh1.rotation.y = this.time;
+        this.meshLines1.rotation.x = this.time;
+        this.meshLines1.rotation.y = this.time;
+
+        this.mesh2.rotation.x = this.time;
+        this.mesh2.rotation.y = this.time;
+        this.meshLines2.rotation.x = this.time;
+        this.meshLines2.rotation.y = this.time;
+
+
+        this.mesh3.rotation.x = this.time;
+        this.mesh3.rotation.y = this.time;
+        this.meshLines3.rotation.x = this.time;
+        this.meshLines3.rotation.y = this.time;
+
+
+        // this.scroll.render()
+        // this.currentScroll = this.scroll.scrollToRender
+        // this.setPosition()
         // this.mesh.rotation.x = this.time /2000;
         // this.mesh.rotation.y = this.time /2000;
 
         // this.material.uniforms.uTime.value =  this.time;
 
-        this.materials.forEach(mat => {
-            mat.uniforms.uTime.value = this.time;
-        })
+        // this.materials.forEach(mat => {
+        //     mat.uniforms.uTime.value = this.time;
+        // })
 
-        this.renderer.render(this.scene, this.camera)
+        // this.renderer.render(this.scene, this.camera)
+        this.composer.render()
+
 
         window.requestAnimationFrame(this.render.bind(this));
     }
@@ -228,108 +312,3 @@ export default class Sketch{
 new Sketch({
     dom: document.getElementById('container')
 })
-
-// /**
-//  * Base
-//  */
-// // Debug
-// const gui = new dat.GUI()
-
-// // Canvas
-// const canvas = document.querySelector('canvas.webgl')
-
-// // Scene
-// const scene = new THREE.Scene()
-
-// /**
-//  * Test mesh
-//  */
-// // Geometry
-// const geometry = new THREE.SphereGeometry( 15, 32, 16 );
-
-// // Material
-// const material = new THREE.ShaderMaterial({
-//     vertexShader: testVertexShader,
-//     fragmentShader: testFragmentShader,
-//     side: THREE.DoubleSide,
-//     uniforms:{
-//         uTime:{value: 0}
-//     }
-// })
-
-// // Mesh
-// const mesh = new THREE.Mesh(geometry, material)
-// mesh.scale.set(0.1,0.1,0.1)
-// mesh.position.z = -3
-// scene.add(mesh)
-
-// /**
-//  * Sizes
-//  */
-// const sizes = {
-//     width: window.innerWidth,
-//     height: window.innerHeight
-// }
-
-// window.addEventListener('resize', () =>
-// {
-//     // Update sizes
-//     sizes.width = window.innerWidth
-//     sizes.height = window.innerHeight
-
-//     // Update camera
-//     camera.aspect = sizes.width / sizes.height
-//     camera.updateProjectionMatrix()
-
-//     // Update renderer
-//     renderer.setSize(sizes.width, sizes.height)
-//     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-// })
-
-// /**
-//  * Camera
-//  */
-// // Base camera
-// const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
-// camera.position.set(0.25, - 0.25, 1)
-// scene.add(camera)
-
-// // Controls
-// const controls = new OrbitControls(camera, canvas)
-// controls.enableDamping = true
-
-// /**
-//  * Renderer
-//  */
-// const renderer = new THREE.WebGLRenderer({
-//     canvas: canvas
-// })
-// renderer.setSize(sizes.width, sizes.height)
-// renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-
-// /**
-//  * Animate
-//  */
-// const clock = new THREE.Clock()
-
-// const tick = () =>
-// {   
-//     const elapsedTime = clock.getElapsedTime()
-
-//     // update material
-
-//     material.uniforms.uTime.value = elapsedTime
-
-    
-
-//     // Update controls
-//     controls.update()
-
-//     // Render
-//     renderer.render(scene, camera)
-
-//     // Call tick again on the next frame
-//     window.requestAnimationFrame(tick)
-// }
-
-// tick()
