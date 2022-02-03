@@ -274,20 +274,20 @@ export default class Sketch{
 
         // Rotations
 
-        this.mesh1.rotation.x = this.time;
-        this.mesh1.rotation.y = this.time;
-        this.meshLines1.rotation.x = this.time;
-        this.meshLines1.rotation.y = this.time;
+        this.mesh1.rotation.x = -this.time*0.5;
+        this.mesh1.rotation.y = -this.time*1.2;
+        this.meshLines1.rotation.x = -this.time*0.5;
+        this.meshLines1.rotation.y = -this.time*1.2;
 
-        this.mesh2.rotation.x = this.time;
-        this.mesh2.rotation.y = this.time;
-        this.meshLines2.rotation.x = this.time;
-        this.meshLines2.rotation.y = this.time;
+        this.mesh2.rotation.x = this.time *0.94;
+        this.mesh2.rotation.y = -this.time;
+        this.meshLines2.rotation.x = this.time*0.94;
+        this.meshLines2.rotation.y = -this.time;
 
 
-        this.mesh3.rotation.x = this.time;
+        this.mesh3.rotation.x = -this.time*1.05;
         this.mesh3.rotation.y = this.time;
-        this.meshLines3.rotation.x = this.time;
+        this.meshLines3.rotation.x = -this.time*1.05;
         this.meshLines3.rotation.y = this.time;
 
 
