@@ -107,16 +107,16 @@ export default class Sketch{
             uNoiseStrength: 0.15,
 
             position1X: 0,
-            position1Y: 0,
+            position1Y: 0.5,
             position1Z: 0,
 
-            position2X: -5,
-            position2Y: 0,
-            position2Z: 0,
+            position2X: -2,
+            position2Y: -1,
+            position2Z: 1,
 
-            position3X: 5,
-            position3Y: 0,
-            position3Z: 0,
+            position3X: 2,
+            position3Y: -1,
+            position3Z: 1,
 
             cameraZ: 8
         };
@@ -199,13 +199,13 @@ export default class Sketch{
 
         this.mesh2 = new THREE.Mesh(this.geometryLines, this.material);
         this.meshLines2 = new THREE.Mesh(this.geometryLines, this.materialLines);
-        this.mesh2.position.set(-5,0,0)
-        this.meshLines2.position.set(-5,0,0)
+        // this.mesh2.position.set(-5,0,0)
+        // this.meshLines2.position.set(-5,0,0)
 
         this.mesh3 = new THREE.Mesh(this.geometryLines, this.material);
         this.meshLines3 = new THREE.Mesh(this.geometryLines, this.materialLines);
-        this.mesh3.position.set(5,0,0)
-        this.meshLines3.position.set(5,0,0)
+        // this.mesh3.position.set(5,0,0)
+        // this.meshLines3.position.set(5,0,0)
 
         this.scene.add(this.mesh1, this.meshLines1);
         this.scene.add(this.mesh2, this.meshLines2);
@@ -244,17 +244,19 @@ export default class Sketch{
         this.mesh1.position.y = this.settings.position1Y
         this.meshLines1.position.y = this.settings.position1Y
 
-        this.mesh1.position.z = this.settings.position1Z
-        this.meshLines1.position.z = this.settings.position1Z
+        this.mesh1.position.z = this.settings.position1Z  + Math.sin(this.time * 15) * 0.5  
+        this.meshLines1.position.z = this.settings.position1Z  + Math.sin(this.time * 15) *0.5 
+        
+        
 
         this.mesh2.position.x = this.settings.position2X
         this.meshLines2.position.x = this.settings.position2X
 
-        this.mesh2.position.y = this.settings.position2Y
-        this.meshLines2.position.y = this.settings.position2Y
+        this.mesh2.position.y = this.settings.position2Y   
+        this.meshLines2.position.y = this.settings.position2Y 
 
-        this.mesh2.position.z = this.settings.position2Z
-        this.meshLines2.position.z = this.settings.position2Z
+        this.mesh2.position.z = this.settings.position2Z - Math.sin(this.time * 25) * 0.2  
+        this.meshLines2.position.z = this.settings.position2Z - Math.sin(this.time * 25) *0.2 
 
         this.mesh3.position.x = this.settings.position3X
         this.meshLines3.position.x = this.settings.position3X
@@ -262,8 +264,8 @@ export default class Sketch{
         this.mesh3.position.y = this.settings.position3Y
         this.meshLines3.position.y = this.settings.position3Y
 
-        this.mesh3.position.z = this.settings.position3Z
-        this.meshLines3.position.z = this.settings.position3Z
+        this.mesh3.position.z = this.settings.position3Z + Math.sin(this.time * 10) * 0.4  
+        this.meshLines3.position.z = this.settings.position3Z + Math.sin(this.time * 10) *0.4 
 
         // Camera Position
 
